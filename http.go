@@ -1,9 +1,9 @@
-package apifw
+package simpleapi
 
 import (
 	"fmt"
-	"github.com/duhaifeng/apifw/db"
 	log "github.com/duhaifeng/loglet"
+	"github.com/duhaifeng/simpleapi/db"
 	"github.com/gorilla/mux"
 	"net/http"
 	"os"

@@ -1,4 +1,4 @@
-package apifw
+package simpleapi
 
 import (
 	"github.com/google/uuid"

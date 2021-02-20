@@ -1,4 +1,4 @@
-package apifw
+package simpleapi
 
 import (
 	"encoding/json"

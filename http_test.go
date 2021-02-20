@@ -1,4 +1,4 @@
-package apifw
+package simpleapi
 
 import (
 	"fmt"
@@ -26,7 +26,8 @@ func TestApiServer(t *testing.T) {
 	//设置限流沙漏
 	s.GetTokenFunnel().SetDefaultTokenQuota(10)
 	//s.GetTokenFunnel().SetTokenQuota("/struct_handler", 10)
-	//err := s.OpenOrmConn("127.0.0.1", "", "", "", "")
+	//打开数据库连接
+	//err := s.OpenOrmConn("127.0.0.1", "3306", "root", "123456", "test_db")
 	//if err != nil {
 	//	fmt.Println(err)
 	//	return
@@ -35,6 +36,7 @@ func TestApiServer(t *testing.T) {
 	//service = s.InitServiceInstance(service).(*HandlerService)
 	//service.DoService()
 	s.StartListen("0.0.0.0", "6666")
+	time.Sleep(time.Second)
 }
 
 func GetHandler(r *Request, w *Response) {

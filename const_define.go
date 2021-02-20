@@ -1,4 +1,4 @@
-package apifw
+package simpleapi
 
 const (
 	HTTP_HEADER_AUTH_TOKEN     = "Auth-Token"

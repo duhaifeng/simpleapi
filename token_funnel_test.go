@@ -1,4 +1,4 @@
-package apifw
+package simpleapi
 
 import (
 	"sync"
@@ -28,21 +28,6 @@ func TestTokenBucket(t *testing.T) {
 		}
 		wg1.Wait()
 	}()
-	//go func() {
-	//	wg.Add(1)
-	//	defer wg.Done()
-	//	for i := 0; i < 1000; i++ {
-	//		logger.Debug("T2-%d, %s", i, time.Now().String())
-	//		tokenFunnel.GetToken("T2", nil)
-	//	}
-	//}()
-	//go func() {
-	//	wg.Add(1)
-	//	for i := 0; i < 1000; i++ {
-	//		logger.Debug("T3-%d, %s", i, time.Now().String())
-	//		tokenFunnel.GetToken("T3")
-	//	}
-	//}()
 	time.Sleep(time.Second)
 	wg.Wait()
 }

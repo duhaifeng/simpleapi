@@ -1,8 +1,8 @@
-package apifw
+package simpleapi
 
 import (
 	"fmt"
-	"github.com/duhaifeng/apifw/db"
+	"github.com/duhaifeng/simpleapi/db"
 	"github.com/jinzhu/gorm"
 )
 
