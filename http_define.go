@@ -123,7 +123,17 @@ func (req *Request) GetFormFile(key string) (multipart.File, *multipart.FileHead
  * API Server Handler所使用的Response对象封装
  */
 type Response struct {
-	oriResp http.ResponseWriter
+	oriResp          http.ResponseWriter
+	respData         map[string]interface{}
+	alreadyResponsed bool //标识是否外部程序已经自己进行了Response，如果没有，则默认JSON形式返回
+}
+
+/**
+ * Response对象内部初始化
+ */
+func (resp *Response) Init() {
+	resp.alreadyResponsed = false
+	resp.respData = make(map[string]interface{})
 }
 
 /**
@@ -141,6 +151,38 @@ func (resp *Response) SetHeader(key, value string) {
 }
 
 /**
+ * 设置向客户端返回的数据
+ */
+func (resp *Response) SetResponseData(key string, value interface{}) {
+	resp.respData[key] = value
+}
+
+/**
+ * 获取要向客户端返回的数据
+ */
+func (resp *Response) GetResponseData(key string) interface{} {
+	data, ok := resp.respData[key]
+	if !ok {
+		return nil
+	}
+	return data
+}
+
+/**
+ * 告知框架外部程序已经自己做了响应，免除框架对客户端写入数据
+ */
+func (resp *Response) AlreadyResponsed() {
+	resp.alreadyResponsed = true
+}
+
+/**
+ * 获取外部程序是否已经自己做了响应
+ */
+func (resp *Response) IsAlreadyResponsed() bool {
+	return resp.alreadyResponsed
+}
+
+/**
  * 向客户端写回响应状态码
  */
 func (resp *Response) WriteHeader(h int) {
@@ -155,17 +197,13 @@ func (resp *Response) Write(body []byte) (int, error) {
 }
 
 /**
- * 将响应消息转换为统一的Json格式写回客户端：{code:200, data:{xx}, message:"xx"}
+ * 将响应消息转换为统一的Json格式写回客户端
  */
-func (resp *Response) FormatResponse(httpCode int, message string, data interface{}) (int, error) {
+func (resp *Response) JsonResponse(data interface{}) (int, error) {
 	resp.SetHeader("Content-Type", "Application/json")
-	respData := make(map[string]interface{})
-	respData["code"] = httpCode
-	respData["message"] = message
-	respData["data"] = data
-	body, err := json.Marshal(respData)
+	body, err := json.Marshal(data)
 	if err != nil {
-		resp.oriResp.WriteHeader(500)
+		resp.oriResp.WriteHeader(http.StatusInternalServerError)
 		resp.oriResp.Write([]byte(err.Error()))
 		return -1, err
 	}
@@ -174,9 +212,9 @@ func (resp *Response) FormatResponse(httpCode int, message string, data interfac
 }
 
 /*
- * 主机信息导出使用
+ * 下载文件时使用
  */
-func (resp *Response) FormatFileResponse(httpCode int, fileName string, data interface{}) (int, error) {
+func (resp *Response) SendFileResponse(httpCode int, fileName string, data interface{}) (int, error) {
 	resp.SetHeader("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
 	resp.SetHeader("Content-Type", "application/octet-stream")
 	resp.WriteHeader(httpCode)

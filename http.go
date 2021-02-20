@@ -108,6 +108,7 @@ func (this *ApiServer) registerFuncHandlerRoute() {
 			reqWrapper := new(Request)
 			reqWrapper.SetOriReq(r)
 			respWrapper := new(Response)
+			respWrapper.Init()
 			respWrapper.SetOriResp(w)
 			ctx := this.constructContext(reqWrapper)
 			reqWrapper.SetContext(ctx)
@@ -141,6 +142,7 @@ func (this *ApiServer) registerStructHandlerRoute() {
 			reqWrapper := new(Request)
 			reqWrapper.SetOriReq(r)
 			respWrapper := new(Response)
+			respWrapper.Init()
 			respWrapper.SetOriResp(w)
 			ctx := this.constructContext(reqWrapper)
 			reqWrapper.SetContext(ctx)
@@ -313,16 +315,16 @@ func (this *ApiServer) callStructHandler(interceptorAndHandler IApiHandler, ctx 
 		if err != nil {
 			logger.Error(ctx.reqId+" unhandled error: %v", err)
 			debug.PrintStack()
-			w.FormatResponse(http.StatusBadRequest, fmt.Sprintf("unhandled error <%s> %v", ctx.GetRequestId(), err), nil)
+			w.JsonResponse(fmt.Sprintf("unhandled error <%s> %v", ctx.GetRequestId(), err))
 		}
 	}()
-	startTime := time.Now()
-	resp, err := interceptorAndHandler.HandleRequest(r)
-	useTime := time.Since(startTime)
-	logger.Debug("%s %s <%dms> ", interceptorAndHandler.GetContext().GetRequestId(), r.GetUrl().String(), useTime.Nanoseconds()/1000000)
+	resp, err := interceptorAndHandler.HandleRequest(r, w)
+	if w.IsAlreadyResponsed() {
+		return
+	}
 	if err != nil {
-		w.FormatResponse(http.StatusBadRequest, fmt.Sprintf("error <%s> %v", ctx.GetRequestId(), err), resp)
+		w.JsonResponse(fmt.Sprintf("error <%s> %v", ctx.GetRequestId(), err))
 	} else {
-		w.FormatResponse(http.StatusOK, fmt.Sprintf("ok <%s>", ctx.GetRequestId()), resp)
+		w.JsonResponse(resp)
 	}
 }

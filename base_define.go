@@ -42,7 +42,7 @@ type IApiHandler interface {
 	setApiServer(apiServer *ApiServer)
 	SetContext(ctx *RequestContext)
 	GetContext() *RequestContext
-	HandleRequest(r *Request) (interface{}, error)
+	HandleRequest(r *Request, w *Response) (interface{}, error)
 }
 
 /**
@@ -76,8 +76,8 @@ func (this *Interceptor) InitDbOperator(dbOperatorObj IApiDbOperator) interface{
 /**
  * 定义拦截器主业务逻辑方法，拦截器默认的业务逻辑就是调用下一个拦截器
  */
-func (this *Interceptor) HandleRequest(r *Request) (interface{}, error) {
-	return this.CallNextProcess(r)
+func (this *Interceptor) HandleRequest(r *Request, w *Response) (interface{}, error) {
+	return this.CallNextProcess(r, w)
 }
 
 /**
@@ -90,11 +90,11 @@ func (this *Interceptor) SetNext(next IApiHandler) {
 /**
  * 调用当前拦截器的后一个拦截器
  */
-func (this *Interceptor) CallNextProcess(r *Request) (interface{}, error) {
+func (this *Interceptor) CallNextProcess(r *Request, w *Response) (interface{}, error) {
 	if this.next == nil {
 		return nil, fmt.Errorf("inteceptor is nil")
 	}
-	return this.next.HandleRequest(r)
+	return this.next.HandleRequest(r, w)
 }
 
 /**

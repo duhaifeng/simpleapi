@@ -42,7 +42,7 @@ func TestApiServer(t *testing.T) {
 func GetHandler(r *Request, w *Response) {
 	fmt.Println(r.GetUrl())
 	fmt.Println("url-var:", r.GetUrlVar("getid"))
-	w.FormatResponse(200, "processed by h1", r.GetUrlVar("getid"))
+	w.JsonResponse(r.GetUrlVar("getid"))
 }
 
 func ParamHandler(r *Request, w *Response) {
@@ -60,32 +60,32 @@ func ParamHandler(r *Request, w *Response) {
 	data["k1"] = r.GetUrlParam("k1")
 	data["k2"] = r.GetFormParam("k2")
 	data["k3"] = []int{1, 2, 3}
-	w.FormatResponse(200, "processed by h2", data)
+	w.JsonResponse(data)
 }
 
 func UrlVarHandler(r *Request, w *Response) {
 	w.SetHeader("Content-Type", "Application/json")
 	fmt.Println(">>>", mux.Vars(r.oriReq)["userid"])
-	w.FormatResponse(200, "processed by h3", r.GetUrlVar("userid"))
+	w.JsonResponse(r.GetUrlVar("userid"))
 }
 
 func UpFileHandler(r *Request, w *Response) {
 	upFile, h, err := r.GetFormFile("up_file")
 	if err != nil {
-		w.FormatResponse(200, "processed by h4 (err1)", err.Error())
+		w.JsonResponse(err.Error())
 		return
 	}
 	defer upFile.Close()
 	if h.Size != 0 {
 		localFile, err := os.OpenFile("/Users/Downloads/Template/"+h.Filename, os.O_WRONLY|os.O_CREATE, 0666)
 		if err != nil {
-			w.FormatResponse(200, "processed by h4 (err2)", err.Error())
+			w.JsonResponse(err.Error())
 			return
 		}
 		defer localFile.Close()
 		_, err = io.Copy(localFile, upFile)
 		if err != nil {
-			w.FormatResponse(200, "processed by h4 (err3)", err.Error())
+			w.JsonResponse(err.Error())
 			return
 		}
 	}
@@ -93,17 +93,17 @@ func UpFileHandler(r *Request, w *Response) {
 	fmt.Println(">>>", h.Filename)
 	fmt.Println(">>>", h.Size)
 	w.SetHeader("Content-Type", "Application/json")
-	w.FormatResponse(200, "processed by h4", h.Filename)
+	w.JsonResponse(h.Filename)
 }
 
 type MyExceptionInterceptor struct {
 	Interceptor
 }
 
-func (this *MyExceptionInterceptor) HandleRequest(r *Request) (interface{}, error) {
+func (this *MyExceptionInterceptor) HandleRequest(r *Request, w *Response) (interface{}, error) {
 	fmt.Println("1111111111111111MyExceptionInterceptor", this.GetContext().GetRequestId())
 	this.GetContext().SetAttachment("kkk", "vvv")
-	data, err := this.CallNextProcess(r)
+	data, err := this.CallNextProcess(r, w)
 	if err != nil {
 		fmt.Println("errrrrrrrrrrrrrrrr: ", err)
 	}
@@ -115,13 +115,13 @@ type MyDbInterceptor struct {
 	Interceptor
 }
 
-func (this *MyDbInterceptor) HandleRequest(r *Request) (interface{}, error) {
+func (this *MyDbInterceptor) HandleRequest(r *Request, w *Response) (interface{}, error) {
 	fmt.Println("333333333333333333MyDbInterceptor", this.GetContext().GetRequestId())
 	fmt.Println(this.GetContext().GetAttachment("kkk"))
 	serviceDb := new(ServiceDb)
 	serviceDb = this.InitDbOperator(serviceDb).(*ServiceDb)
 	serviceDb.operateDb()
-	data, err := this.CallNextProcess(r)
+	data, err := this.CallNextProcess(r, w)
 	fmt.Println("444444444444444444MyDbInterceptor", this.GetContext().GetRequestId())
 	return data, err
 }
@@ -143,7 +143,7 @@ func (this *MyStructHandler) Init() {
 	this.flag = cnt
 }
 
-func (this *MyStructHandler) HandleRequest(r *Request) (interface{}, error) {
+func (this *MyStructHandler) HandleRequest(r *Request, w *Response) (interface{}, error) {
 	time.Sleep(time.Microsecond * 1000)
 	fmt.Printf(">>>>> %s %d %d\n", this.GetContext().reqId, this.flag, reflect.ValueOf(this).Pointer())
 	this.MyService.DoService()
