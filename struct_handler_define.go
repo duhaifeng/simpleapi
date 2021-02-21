@@ -191,8 +191,8 @@ func (this *BaseService) RollbackTransaction() error {
  */
 type IApiDbOperator interface {
 	Init()
+	setContext(*RequestContext)
 	SetService(*IApiService)
-	SetContext(*RequestContext)
 	GetContext() *RequestContext
 }
 
