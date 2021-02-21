@@ -107,7 +107,8 @@ func (req *Request) GetFormParam(key string) string {
  * 获取Http请求的Body（部分客户端请求的形式是通过Body传递Json定义）
  */
 func (req *Request) GetBody() ([]byte, error) {
-	defer req.oriReq.Body.Close()
+	//此处不能将Body关闭，否则在多次调用本方法时，会提示“invalid Read on closed Body”
+	//defer req.oriReq.Body.Close()
 	body, err := ioutil.ReadAll(req.oriReq.Body)
 	return body, err
 }
