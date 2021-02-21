@@ -111,7 +111,7 @@ func (this *ApiServer) registerFuncHandlerRoute() {
 			respWrapper.Init()
 			respWrapper.SetOriResp(w)
 			ctx := this.constructContext(reqWrapper)
-			reqWrapper.SetContext(ctx)
+			reqWrapper.setContext(ctx)
 
 			logger.Debug("handle api request : %s, %s", r.RequestURI, runtime.FuncForPC(reflect.ValueOf(handlerDef.HandleFunc).Pointer()).Name())
 			handlerDef.HandleFunc(reqWrapper, respWrapper)
@@ -145,15 +145,17 @@ func (this *ApiServer) registerStructHandlerRoute() {
 			respWrapper.Init()
 			respWrapper.SetOriResp(w)
 			ctx := this.constructContext(reqWrapper)
-			reqWrapper.SetContext(ctx)
+			reqWrapper.setContext(ctx)
 
 			this.GetTokenFunnel().GetToken(r.URL.Path, ctx)
 			//每次请求需要生成一个新的Handler对象，避免上下文对象被多个请求共享
 			newStructHandlerVal := reflect.New(structHandlerType)
 			//组装Handler内声明的所有Service Field
 			newStructHandlerVal = this.assembleServiceToHandler(newStructHandlerVal, ctx)
+			//TODO: 如果是POST请求，自动将BODY数据映射到对象中
 			newStructHandler := newStructHandlerVal.Interface().(IApiHandler)
-			newStructHandler.SetContext(ctx)
+			newStructHandler.setContext(ctx)
+			newStructHandler.setReqAndResp(reqWrapper, respWrapper)
 			newStructHandler.Init()
 			headerInterceptor := this.assembleInterceptors(newStructHandler, ctx)
 			this.callStructHandler(headerInterceptor, ctx, reqWrapper, respWrapper)
@@ -203,26 +205,13 @@ func (this *ApiServer) assembleServiceToHandler(handlerVal reflect.Value, ctx *R
 		}
 		serviceVal = this.assembleDbToService(serviceObj, serviceVal, ctx)
 		//组装Service中的DB操作对象
-		serviceObj.SetContext(ctx)
+		serviceObj.setContext(ctx)
 		serviceObj.SetOrmConn(this.ormConn)
 		serviceObj.Init()
 		//logger.Debug("%s assemble service <%p-%s> to handler <%s>'s field", ctx.GetRequestId(), &serviceObj, handlerFieldType.Name(), handlerElem.Type().Name())
 		handlerFieldVal.Set(serviceVal)
 	}
 	return handlerVal
-}
-
-/**
- * 允许ApiServer初始化Service，用于支持ApiServer启动时对Service的单独调用
- */
-func (this *ApiServer) InitServiceInstance(serviceObj IApiService) interface{} {
-	ctx := new(RequestContext)
-	ctx.SetRequestId("<no-request-id>")
-	serviceObj.SetContext(ctx)
-	serviceObj.SetOrmConn(this.ormConn)
-	serviceVal := reflect.ValueOf(serviceObj)
-	serviceVal = this.assembleDbToService(serviceObj, serviceVal, ctx)
-	return serviceVal.Interface()
 }
 
 /**
@@ -260,20 +249,6 @@ func (this *ApiServer) assembleDbToService(serviceObj IApiService, serviceVal re
 }
 
 /**
- * 允许ApiServer初始化DbOperator，用于支持在拦截器中对DbOperator的单独调用
- */
-func (this *ApiServer) InitDbOperator(dbOperatorObj IApiDbOperator) interface{} {
-	//由于设计上，一个DbOperator附属于一个Service（为了从Service层面支持事务），因此对于单独使用的DbOperator需要为其声明一个隐藏
-	//Service对象，保持设计不被破坏
-	serviceHelper := this.InitServiceInstance(new(BaseService)).(IApiService)
-	ctx := new(RequestContext)
-	ctx.SetRequestId("<no-request-id>")
-	dbOperatorObj.SetContext(ctx)
-	dbOperatorObj.SetService(&serviceHelper)
-	return dbOperatorObj
-}
-
-/**
  * 为一个Handler组装拦截器链
  */
 func (this *ApiServer) assembleInterceptors(handler IApiHandler, ctx *RequestContext) IApiHandler {
@@ -283,14 +258,13 @@ func (this *ApiServer) assembleInterceptors(handler IApiHandler, ctx *RequestCon
 		interceptorType := reflect.TypeOf(interceptor)
 		newInterceptorVal := reflect.New(interceptorType.Elem())
 		newInterceptor := newInterceptorVal.Interface().(IApiHandler)
-		newInterceptor.setApiServer(this)
-		newInterceptor.SetContext(ctx)
+		newInterceptor.setContext(ctx)
 		newInterceptor.Init()
 		newInterceptors = append(newInterceptors, newInterceptor)
 	}
 	//在拦截器队列最后加一个结尾拦截器，结尾拦截器纯粹用于将Handler衔接在拦截队列最后
 	lastInterceptor := new(Interceptor)
-	lastInterceptor.SetContext(ctx)
+	lastInterceptor.setContext(ctx)
 	lastInterceptor.Init()
 	lastInterceptor.SetNext(handler)
 	newInterceptors = append(newInterceptors, lastInterceptor)

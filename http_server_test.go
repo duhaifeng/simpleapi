@@ -20,7 +20,6 @@ func TestApiServer(t *testing.T) {
 	s.RegisterHandler("GET", "/struct_handler", MyStructHandler{})
 	//注册拦截器
 	s.RegisterInterceptor(new(MyExceptionInterceptor))
-	s.RegisterInterceptor(new(MyDbInterceptor))
 
 	s.Init()
 	//设置限流沙漏
@@ -108,21 +107,6 @@ func (this *MyExceptionInterceptor) HandleRequest(r *Request, w *Response) (inte
 		fmt.Println("errrrrrrrrrrrrrrrr: ", err)
 	}
 	fmt.Println("22222222222222222MyExceptionInterceptor", this.GetContext().GetRequestId())
-	return data, err
-}
-
-type MyDbInterceptor struct {
-	Interceptor
-}
-
-func (this *MyDbInterceptor) HandleRequest(r *Request, w *Response) (interface{}, error) {
-	fmt.Println("333333333333333333MyDbInterceptor", this.GetContext().GetRequestId())
-	fmt.Println(this.GetContext().GetAttachment("kkk"))
-	serviceDb := new(ServiceDb)
-	serviceDb = this.InitDbOperator(serviceDb).(*ServiceDb)
-	serviceDb.operateDb()
-	data, err := this.CallNextProcess(r, w)
-	fmt.Println("444444444444444444MyDbInterceptor", this.GetContext().GetRequestId())
 	return data, err
 }
 

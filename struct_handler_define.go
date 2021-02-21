@@ -16,14 +16,12 @@ type BaseDefine struct {
 /**
  * 实现IApiHandler接口定义的Init方法
  */
-func (this *BaseDefine) Init() {
-
-}
+func (this *BaseDefine) Init() {}
 
 /**
  * 设置上下文对象（实现IApiHandler接口定义方法）
  */
-func (this *BaseDefine) SetContext(ctx *RequestContext) {
+func (this *BaseDefine) setContext(ctx *RequestContext) {
 	this.ctx = ctx
 }
 
@@ -39,10 +37,41 @@ func (this *BaseDefine) GetContext() *RequestContext {
  */
 type IApiHandler interface {
 	Init()
-	setApiServer(apiServer *ApiServer)
-	SetContext(ctx *RequestContext)
+	setContext(ctx *RequestContext)
+	setReqAndResp(r *Request, w *Response)
 	GetContext() *RequestContext
 	HandleRequest(r *Request, w *Response) (interface{}, error)
+}
+
+/**
+ * Handler层基类定义
+ */
+type BaseHandler struct {
+	req  *Request
+	resp *Response
+	BaseDefine
+}
+
+/**
+ * 设置当前Handler的请求和响应对象，用于在HandleRequest以外的方法能获取到这两个对象
+ */
+func (this *BaseHandler) setReqAndResp(r *Request, w *Response) {
+	this.req = r
+	this.resp = w
+}
+
+/**
+ * 获取当前Handler的请求对象
+ */
+func (this *BaseHandler) GetRequest() *Request {
+	return this.req
+}
+
+/**
+ * 获取当前Handler的响应对象
+ */
+func (this *BaseHandler) GetResponse() *Response {
+	return this.resp
 }
 
 /**
@@ -53,24 +82,12 @@ type IInterceptorChain interface {
 }
 
 /**
- * 拦截器层基类定义，注意：为了使拦截器与Handler能够够成共同的链式结构，所以要求Interceptor与Handler要接口一致
- * （说白了Interceptor是Handler的外层代理）
+ * 拦截器层基类定义，注意：为了使拦截器与Handler能够够成共同的链式结构，所以要求Interceptor与Handler要接口一致，
+ * 因此Interceptor继承自BaseHandler，而非BaseDefine
  */
 type Interceptor struct {
-	apiServer *ApiServer
-	next      IApiHandler
-	BaseDefine
-}
-
-/**
- * 引用ApiServer对象，用于获取ApiServer提供的DbOperator初始化能力
- */
-func (this *Interceptor) setApiServer(apiServer *ApiServer) {
-	this.apiServer = apiServer
-}
-
-func (this *Interceptor) InitDbOperator(dbOperatorObj IApiDbOperator) interface{} {
-	return this.apiServer.InitDbOperator(dbOperatorObj)
+	next IApiHandler
+	BaseHandler
 }
 
 /**
@@ -98,28 +115,13 @@ func (this *Interceptor) CallNextProcess(r *Request, w *Response) (interface{}, 
 }
 
 /**
- * Handler层基类定义
- */
-type BaseHandler struct {
-	apiServer *ApiServer
-	BaseDefine
-}
-
-/**
- * 引用ApiServer对象，用于获取ApiServer的部分初始化能力（对于Handler而言，目前尚无必要使用）
- */
-func (this *BaseHandler) setApiServer(apiServer *ApiServer) {
-	this.apiServer = apiServer
-}
-
-/**
  * 定义Service的方法结构
  */
 type IApiService interface {
 	Init()
+	setContext(*RequestContext)
 	SetOrmConn(*db.GormProxy)
 	GetOrmConn() *db.GormProxy
-	SetContext(*RequestContext)
 	GetContext() *RequestContext
 }
 
