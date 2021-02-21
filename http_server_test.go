@@ -99,10 +99,10 @@ type MyExceptionInterceptor struct {
 	Interceptor
 }
 
-func (this *MyExceptionInterceptor) HandleRequest(r *Request, w *Response) (interface{}, error) {
+func (this *MyExceptionInterceptor) HandleRequest(r *Request) (interface{}, error) {
 	fmt.Println("1111111111111111MyExceptionInterceptor", this.GetContext().GetRequestId())
 	this.GetContext().SetAttachment("kkk", "vvv")
-	data, err := this.CallNextProcess(r, w)
+	data, err := this.CallNextProcess(r)
 	if err != nil {
 		fmt.Println("errrrrrrrrrrrrrrrr: ", err)
 	}
@@ -127,7 +127,7 @@ func (this *MyStructHandler) Init() {
 	this.flag = cnt
 }
 
-func (this *MyStructHandler) HandleRequest(r *Request, w *Response) (interface{}, error) {
+func (this *MyStructHandler) HandleRequest(r *Request) (interface{}, error) {
 	time.Sleep(time.Microsecond * 1000)
 	fmt.Printf(">>>>> %s %d %d\n", this.GetContext().reqId, this.flag, reflect.ValueOf(this).Pointer())
 	this.MyService.DoService()

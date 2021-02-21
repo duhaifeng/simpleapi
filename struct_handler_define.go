@@ -40,7 +40,7 @@ type IApiHandler interface {
 	setContext(ctx *RequestContext)
 	setReqAndResp(r *Request, w *Response)
 	GetContext() *RequestContext
-	HandleRequest(r *Request, w *Response) (interface{}, error)
+	HandleRequest(r *Request) (interface{}, error)
 }
 
 /**
@@ -91,13 +91,6 @@ type Interceptor struct {
 }
 
 /**
- * 定义拦截器主业务逻辑方法，拦截器默认的业务逻辑就是调用下一个拦截器
- */
-func (this *Interceptor) HandleRequest(r *Request, w *Response) (interface{}, error) {
-	return this.CallNextProcess(r, w)
-}
-
-/**
  * 设置当前拦截器的后一个拦截器
  */
 func (this *Interceptor) SetNext(next IApiHandler) {
@@ -107,11 +100,18 @@ func (this *Interceptor) SetNext(next IApiHandler) {
 /**
  * 调用当前拦截器的后一个拦截器
  */
-func (this *Interceptor) CallNextProcess(r *Request, w *Response) (interface{}, error) {
+func (this *Interceptor) CallNextProcess(r *Request) (interface{}, error) {
 	if this.next == nil {
 		return nil, fmt.Errorf("inteceptor is nil")
 	}
-	return this.next.HandleRequest(r, w)
+	return this.next.HandleRequest(r)
+}
+
+/**
+ * 定义拦截器主业务逻辑方法，拦截器默认的业务逻辑就是调用下一个拦截器
+ */
+func (this *Interceptor) HandleRequest(r *Request) (interface{}, error) {
+	return this.CallNextProcess(r)
 }
 
 /**

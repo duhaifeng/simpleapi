@@ -292,7 +292,7 @@ func (this *ApiServer) callStructHandler(interceptorAndHandler IApiHandler, ctx 
 			w.JsonResponse(fmt.Sprintf("unhandled error <%s> %v", ctx.GetRequestId(), err))
 		}
 	}()
-	resp, err := interceptorAndHandler.HandleRequest(r, w)
+	resp, err := interceptorAndHandler.HandleRequest(r)
 	if w.IsAlreadyResponsed() {
 		return
 	}
