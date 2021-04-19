@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"reflect"
 	"regexp"
 	"strings"
@@ -20,11 +21,33 @@ type GormProxy struct {
 }
 
 /**
+ * 打开MySQL数据库连接
+ */
+func (this *GormProxy) OpenMySQL(host, port, user, pass, database string) error {
+	return this.Open("mysql", host, port, user, pass, database)
+}
+
+/**
+ * 打开Sqlite3数据库连接
+ */
+func (this *GormProxy) OpenSqlite3(filePath string) error {
+	return this.Open("sqlite3", filePath, "", "", "", "")
+}
+
+/**
  * 打开数据库连接
  */
-func (this *GormProxy) Open(host, port, user, pass, database string) error {
-	connStr := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&loc=Local&parseTime=true", user, pass, host, port, database)
-	mySqlConn, err := gorm.Open("mysql", connStr)
+func (this *GormProxy) Open(dialect, hostOrPath, port, user, pass, database string) error {
+	var connStr string
+	if dialect == "mysql" {
+		connStr = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&loc=Local&parseTime=true", user, pass, hostOrPath, port, database)
+	} else if dialect == "sqlite3" {
+		connStr = hostOrPath
+	} else {
+		return errors.New("unkown db dialect " + dialect)
+	}
+
+	mySqlConn, err := gorm.Open(dialect, connStr)
 	if err != nil {
 		return err
 	}

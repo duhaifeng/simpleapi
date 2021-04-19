@@ -55,7 +55,7 @@ func (this *ApiServer) GetTokenFunnel() *TokenFunnel {
  */
 func (this *ApiServer) OpenOrmConn(host, port, user, pass, database string) error {
 	this.ormConn = new(db.GormProxy)
-	return this.ormConn.Open(host, port, user, pass, database)
+	return this.ormConn.OpenMySQL(host, port, user, pass, database)
 }
 
 /**
