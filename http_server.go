@@ -61,10 +61,10 @@ func (this *ApiServer) OpenMySQLOrmConn(host, port, user, pass, database string)
 /**
  * 打开服务器使用的全局数据库连接(Sqlite3)
  */
-func (this *ApiServer) OpenSqliteOrmConn(filePath string) error {
-	this.ormConn = new(db.GormProxy)
-	return this.ormConn.OpenSqlite3(filePath)
-}
+//func (this *ApiServer) OpenSqliteOrmConn(filePath string) error {
+//	this.ormConn = new(db.GormProxy)
+//	return this.ormConn.OpenSqlite3(filePath)
+//}
 
 /**
  * 启动一个API Server的端口监听
