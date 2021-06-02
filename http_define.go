@@ -145,6 +145,13 @@ func (resp *Response) SetOriResp(oriResp http.ResponseWriter) {
 }
 
 /**
+ * 获取原始的Http Request对象
+ */
+func (resp *Response) GetOriResp() http.ResponseWriter {
+	return resp.oriResp
+}
+
+/**
  * 设置向客户端响应的头部信息
  */
 func (resp *Response) SetHeader(key, value string) {
