@@ -44,6 +44,13 @@ func (this *ApiServer) Init() {
 }
 
 /**
+ * 设置框架与外层应用使用统一的日志器
+ */
+func (this *ApiServer) SetLogger(outerLogger *log.Logger) {
+	logger = outerLogger
+}
+
+/**
  * 获取ApiServer内置访问令牌漏斗
  */
 func (this *ApiServer) GetTokenFunnel() *TokenFunnel {
