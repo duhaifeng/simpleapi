@@ -166,7 +166,7 @@ func (this *ApiServer) registerStructHandlerRoute() {
 			this.GetTokenFunnel().GetToken(r.URL.Path, ctx)
 			//每次请求需要生成一个新的Handler对象，避免上下文对象被多个请求共享
 			newStructHandlerVal := reflect.New(structHandlerType)
-			if r.Method == http.MethodPost && r.Header.Get("Content-Type") == "application/json" {
+			if r.Method != http.MethodGet {
 				//将Body的JSON数据组装到Handler数据字段中
 				this.assembleRequestDataToHandler(newStructHandlerVal, reqWrapper)
 			}
