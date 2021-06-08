@@ -72,6 +72,13 @@ func (req *Request) SetHeader(key, value string) {
 }
 
 /**
+ * 获取请求方法
+ */
+func (req *Request) GetMethod() string {
+	return req.oriReq.Method
+}
+
+/**
  * 获取请求的原始的Http URL
  */
 func (req *Request) GetUrl() *url.URL {
