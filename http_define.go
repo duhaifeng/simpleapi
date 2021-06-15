@@ -37,7 +37,8 @@ type StructHandlerDef struct {
  * API Server Handler所使用的Request对象封装
  */
 type Request struct {
-	oriReq *http.Request
+	bodyContent []byte
+	oriReq      *http.Request
 	BaseDefine
 }
 
@@ -114,10 +115,14 @@ func (req *Request) GetFormParam(key string) string {
  * 获取Http请求的Body（部分客户端请求的形式是通过Body传递Json定义）
  */
 func (req *Request) GetBody() ([]byte, error) {
-	//此处不能将Body关闭，否则在多次调用本方法时，会提示“invalid Read on closed Body”
-	//defer req.oriReq.Body.Close()
-	body, err := ioutil.ReadAll(req.oriReq.Body)
-	return body, err
+	var err error
+	//由于Body的io.ReadCloser类型只能读取一次，因此在第一次读取就要把Body的内容缓存下来，留作反复使用
+	//另外注意Body关闭后，不能再次读取，否则会提示“invalid Read on closed Body”
+	if req.bodyContent == nil {
+		defer req.oriReq.Body.Close()
+		req.bodyContent, err = ioutil.ReadAll(req.oriReq.Body)
+	}
+	return req.bodyContent, err
 }
 
 /**
