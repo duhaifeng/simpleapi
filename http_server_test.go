@@ -34,13 +34,15 @@ func TestApiServer(t *testing.T) {
 	//service := new(HandlerService)
 	//service = s.InitServiceInstance(service).(*HandlerService)
 	//service.DoService()
-	s.StartListen("0.0.0.0", "6666")
+	s.StartListen("0.0.0.0", "6667")
 	time.Sleep(time.Second)
 }
 
 func GetHandler(r *Request, w *Response) {
 	fmt.Println(r.GetUrl())
 	fmt.Println("url-var:", r.GetUrlVar("getid"))
+	body, _ := r.GetBody()
+	fmt.Println("body", string(body))
 	w.JsonResponse(r.GetUrlVar("getid"))
 }
 
@@ -130,7 +132,10 @@ func (this *MyStructHandler) Init() {
 func (this *MyStructHandler) HandleRequest(r *Request) (interface{}, error) {
 	time.Sleep(time.Microsecond * 1000)
 	fmt.Printf(">>>>> %s %d %d\n", this.GetContext().reqId, this.flag, reflect.ValueOf(this).Pointer())
-	this.MyService.DoService()
+	body, _ := r.GetBody()
+	fmt.Println("body", string(body))
+	body2, _ := r.GetBody()
+	fmt.Println("body2", string(body2))
 	return this.flag, nil
 }
 

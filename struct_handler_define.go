@@ -3,7 +3,7 @@ package simpleapi
 import (
 	"fmt"
 	"github.com/duhaifeng/simpleapi/db"
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
 /**
@@ -123,6 +123,7 @@ type IApiService interface {
 	SetOrmConn(*db.GormProxy)
 	GetOrmConn() *db.GormProxy
 	GetContext() *RequestContext
+	OpenOrmConnForTest(host, port, user, pass, database string) error
 }
 
 /**
@@ -133,6 +134,14 @@ type BaseService struct {
 	ormConn   *db.GormProxy
 	ormTxConn *db.GormProxy
 	BaseDefine
+}
+
+/**
+ * 打开一个临时的数据库，主要用在单元测试的场景，方便对Service的方法直接测试
+ */
+func (this *BaseService) OpenOrmConnForTest(host, port, user, pass, database string) error {
+	this.ormConn = new(db.GormProxy)
+	return this.ormConn.OpenMySQL(host, port, user, pass, database)
 }
 
 /**
@@ -194,13 +203,15 @@ type IApiDbOperator interface {
 	setContext(*RequestContext)
 	SetService(*IApiService)
 	GetContext() *RequestContext
+	OpenOrmConnForTest(host, port, user, pass, database string) error
 }
 
 /**
  * DB操作层基类定义
  */
 type BaseDbOperator struct {
-	service *IApiService
+	ormConnForTest *db.GormProxy
+	service        *IApiService
 	BaseDefine
 }
 
@@ -212,8 +223,21 @@ func (this *BaseDbOperator) SetService(service *IApiService) {
 }
 
 /**
+ * 打开一个临时的数据库，主要用在单元测试的场景，方便对Service的方法直接测试
+ */
+func (this *BaseDbOperator) OpenOrmConnForTest(host, port, user, pass, database string) error {
+	this.ormConnForTest = new(db.GormProxy)
+	return this.ormConnForTest.OpenMySQL(host, port, user, pass, database)
+}
+
+/**
  * 获取操作数据库的ORM连接
  */
 func (this *BaseDbOperator) OrmConn() *gorm.DB {
-	return (*this.service).GetOrmConn().Conn
+	//如果打开了测试用的DB连接，则优先使用
+	if this.ormConnForTest != nil {
+		return this.ormConnForTest.Conn
+	} else {
+		return (*this.service).GetOrmConn().Conn
+	}
 }

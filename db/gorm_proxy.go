@@ -3,8 +3,8 @@ package db
 import (
 	"errors"
 	"fmt"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 	//_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"reflect"
 	"regexp"
@@ -44,14 +44,13 @@ func (this *GormProxy) Open(dialect, hostOrPath, port, user, pass, database stri
 		//} 	else if dialect == "sqlite3" {
 		//	connStr = hostOrPath
 	} else {
-		return errors.New("unkown db dialect " + dialect)
+		return errors.New("unknown db dialect " + dialect)
 	}
-
-	mySqlConn, err := gorm.Open(dialect, connStr)
+	mysqlConn, err := gorm.Open(mysql.Open(connStr), &gorm.Config{})
 	if err != nil {
 		return err
 	}
-	this.Conn = mySqlConn
+	this.Conn = mysqlConn
 	this.inTx = false
 	return nil
 }
@@ -65,7 +64,7 @@ func (this *GormProxy) Begin() (*GormProxy, error) {
 	}
 	tx := this.Conn.Begin()
 	if tx.Error != nil {
-		return nil, fmt.Errorf("gorm: begin transaction failed.error%s", tx.Error.Error())
+		return nil, fmt.Errorf("gorm: begin transaction failed.error %s", tx.Error.Error())
 	}
 	proxyInTx := new(GormProxy)
 	proxyInTx.Conn = tx
@@ -271,12 +270,12 @@ func getStructValueMap(v reflect.Value, isPtr bool) []*map[string]interface{} {
 }
 
 /**
- * 关闭数据库连接
+ * 关闭数据库连接（更换gorm.io后Close()方法不被支持）
  */
-func (this *GormProxy) Close() error {
-	err := this.Conn.Close()
-	if err != nil {
-		return fmt.Errorf("gorm: close database failed.error:%s", err.Error())
-	}
-	return nil
-}
+//func (this *GormProxy) Close() error {
+//	err := this.Conn.Close()
+//	if err != nil {
+//		return fmt.Errorf("gorm: close database failed.error:%s", err.Error())
+//	}
+//	return nil
+//}
