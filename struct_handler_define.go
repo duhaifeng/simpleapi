@@ -29,6 +29,13 @@ func (this *BaseDefine) setContext(ctx *RequestContext) {
  * 获取上下文对象（实现IApiHandler接口定义方法）
  */
 func (this *BaseDefine) GetContext() *RequestContext {
+	//如果ctx为nil，可能是在一些单元测试的场景直接构建了Service对象，为了避免打log时GetContext().GetRequestId()出错，这里构造一个临时ctx
+	if this.ctx == nil {
+		tmpCtx := new(RequestContext)
+		tmpCtx.Init()
+		tmpCtx.reqId = "<no-request-id>"
+		return tmpCtx
+	}
 	return this.ctx
 }
 
