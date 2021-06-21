@@ -130,7 +130,7 @@ type IApiService interface {
 	SetOrmConn(*db.GormProxy)
 	GetOrmConn() *db.GormProxy
 	GetContext() *RequestContext
-	OpenOrmConnForTest(host, port, user, pass, database string) error
+	OpenOrmConnSeparately(host, port, user, pass, database string) error
 }
 
 /**
@@ -146,7 +146,7 @@ type BaseService struct {
 /**
  * 打开一个临时的数据库，主要用在单元测试的场景，方便对Service的方法直接测试
  */
-func (this *BaseService) OpenOrmConnForTest(host, port, user, pass, database string) error {
+func (this *BaseService) OpenOrmConnSeparately(host, port, user, pass, database string) error {
 	this.ormConn = new(db.GormProxy)
 	return this.ormConn.OpenMySQL(host, port, user, pass, database)
 }
@@ -210,15 +210,15 @@ type IApiDbOperator interface {
 	setContext(*RequestContext)
 	SetService(*IApiService)
 	GetContext() *RequestContext
-	OpenOrmConnForTest(host, port, user, pass, database string) error
+	OpenOrmConnSeparately(host, port, user, pass, database string) error
 }
 
 /**
  * DB操作层基类定义
  */
 type BaseDbOperator struct {
-	ormConnForTest *db.GormProxy
-	service        *IApiService
+	separateOrmConn *db.GormProxy //一个单独的数据库连接，用于直接测试DbOperator的场景
+	service         *IApiService
 	BaseDefine
 }
 
@@ -232,9 +232,9 @@ func (this *BaseDbOperator) SetService(service *IApiService) {
 /**
  * 打开一个临时的数据库，主要用在单元测试的场景，方便对Service的方法直接测试
  */
-func (this *BaseDbOperator) OpenOrmConnForTest(host, port, user, pass, database string) error {
-	this.ormConnForTest = new(db.GormProxy)
-	return this.ormConnForTest.OpenMySQL(host, port, user, pass, database)
+func (this *BaseDbOperator) OpenOrmConnSeparately(host, port, user, pass, database string) error {
+	this.separateOrmConn = new(db.GormProxy)
+	return this.separateOrmConn.OpenMySQL(host, port, user, pass, database)
 }
 
 /**
@@ -242,8 +242,8 @@ func (this *BaseDbOperator) OpenOrmConnForTest(host, port, user, pass, database 
  */
 func (this *BaseDbOperator) OrmConn() *gorm.DB {
 	//如果打开了测试用的DB连接，则优先使用
-	if this.ormConnForTest != nil {
-		return this.ormConnForTest.Conn
+	if this.separateOrmConn != nil {
+		return this.separateOrmConn.Conn
 	} else {
 		return (*this.service).GetOrmConn().Conn
 	}
