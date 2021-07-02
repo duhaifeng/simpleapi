@@ -22,6 +22,7 @@ var logger = log.NewLogger()
  */
 type ApiServer struct {
 	tokenFunnel      *TokenFunnel
+	allowCrossDomain bool
 	httpRouter       *mux.Router
 	funcHandlerDef   []*FuncHandlerDef
 	structHandlerDef []*StructHandlerDef
@@ -40,7 +41,10 @@ func (this *ApiServer) Init() {
 	this.tokenFunnel = new(TokenFunnel)
 	this.tokenFunnel.Init()
 	this.httpRouter = mux.NewRouter()
-	this.httpRouter.NotFoundHandler = http.NotFoundHandler()
+}
+
+func (this *ApiServer) SetNotFoundHandler(notFoundHandler http.Handler) {
+	this.httpRouter.NotFoundHandler = notFoundHandler
 }
 
 /**
@@ -90,10 +94,20 @@ func (this *ApiServer) StartListen(addr, port string) {
 }
 
 /**
+ * 设置是否允许跨域请求，如果允许，则需要为每个请求增加一个对应的options请求
+ */
+func (this *ApiServer) AllowCrossDomainRequest(allowCrossDomain bool) {
+	this.allowCrossDomain = allowCrossDomain
+}
+
+/**
  * 向API Server注册请求路由（一个api对应一个url，一个url对应一个handler）
  */
 func (this *ApiServer) HandRequest(method, path string, handler ApiHandlerFunc) {
 	this.funcHandlerDef = append(this.funcHandlerDef, &FuncHandlerDef{Method: method, Path: path, HandleFunc: handler})
+	if this.allowCrossDomain && method != http.MethodOptions {
+		this.funcHandlerDef = append(this.funcHandlerDef, &FuncHandlerDef{Method: http.MethodOptions, Path: path, HandleFunc: AllowCrossDomainHelper})
+	}
 }
 
 /**
@@ -109,6 +123,9 @@ func (this *ApiServer) RegisterInterceptor(interceptor IApiHandler) {
  */
 func (this *ApiServer) RegisterHandler(method, path string, handler interface{}) {
 	this.structHandlerDef = append(this.structHandlerDef, &StructHandlerDef{Method: method, Path: path, StructHandler: handler})
+	if this.allowCrossDomain && method != http.MethodOptions {
+		this.funcHandlerDef = append(this.funcHandlerDef, &FuncHandlerDef{Method: http.MethodOptions, Path: path, HandleFunc: AllowCrossDomainHelper})
+	}
 }
 
 /**

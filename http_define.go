@@ -25,6 +25,18 @@ type FuncHandlerDef struct {
 }
 
 /**
+ * 用于支持跨域请求的Handler
+ */
+func AllowCrossDomainHelper(r *Request, w *Response) {
+	w.SetHeader("Access-Control-Allow-Origin", "*")
+	w.SetHeader("Access-Control-Request-Method", "POST,GET,OPTIONS,PUT,DEL")
+	//this.GetResponse().SetHeader("Access-Control-Allow-Methods", "POST,GET,OPTIONS,PUT,DELETE")
+	w.SetHeader("Access-Control-Allow-Headers", "*")
+	w.SetHeader("Content-Type", "Application/json")
+	w.Write([]byte("{\"code\":0, \"message\":\"cross domain request supported\"}\n"))
+}
+
+/**
  * 存放结构体请求句柄定义
  */
 type StructHandlerDef struct {
