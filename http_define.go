@@ -29,8 +29,8 @@ type FuncHandlerDef struct {
  */
 func AllowCrossDomainHelper(r *Request, w *Response) {
 	w.SetHeader("Access-Control-Allow-Origin", "*")
-	w.SetHeader("Access-Control-Request-Method", "POST,GET,OPTIONS,PUT,DEL")
-	//this.GetResponse().SetHeader("Access-Control-Allow-Methods", "POST,GET,OPTIONS,PUT,DELETE")
+	w.SetHeader("Access-Control-Request-Method", "POST,GET,OPTIONS,PUT,DELETE")
+	w.SetHeader("Access-Control-Allow-Methods", "POST,GET,OPTIONS,PUT,DELETE")
 	w.SetHeader("Access-Control-Allow-Headers", "*")
 	w.SetHeader("Content-Type", "Application/json")
 	w.Write([]byte("{\"code\":0, \"message\":\"cross domain request supported\"}\n"))
