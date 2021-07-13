@@ -22,6 +22,7 @@ func TestApiServer(t *testing.T) {
 	s.RegisterInterceptor(new(MyExceptionInterceptor))
 
 	s.Init()
+	s.PrintRouteTable(true)
 	//设置限流沙漏
 	s.GetTokenFunnel().SetDefaultTokenQuota(10)
 	//s.GetTokenFunnel().SetTokenQuota("/struct_handler", 10)

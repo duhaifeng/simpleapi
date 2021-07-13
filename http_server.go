@@ -21,13 +21,14 @@ var logger = log.NewLogger()
  * 基于Http+Json的API短链接服务器定义
  */
 type ApiServer struct {
-	tokenFunnel      *TokenFunnel
-	allowCrossDomain bool
-	httpRouter       *mux.Router
-	funcHandlerDef   []*FuncHandlerDef
-	structHandlerDef []*StructHandlerDef
-	interceptors     []IApiHandler
-	ormConn          *db.GormProxy //管理全局数据库链接
+	tokenFunnel       *TokenFunnel
+	allowCrossDomain  bool
+	httpRouter        *mux.Router
+	printRegisterInfo bool
+	funcHandlerDef    []*FuncHandlerDef
+	structHandlerDef  []*StructHandlerDef
+	interceptors      []IApiHandler
+	ormConn           *db.GormProxy //管理全局数据库链接
 }
 
 /**
@@ -76,6 +77,13 @@ func (this *ApiServer) OpenMySQLOrmConn(host, port, user, pass, database string)
 //	this.ormConn = new(db.GormProxy)
 //	return this.ormConn.OpenSqlite3(filePath)
 //}
+
+/**
+ * 控制是否打印路由信息
+ */
+func (this *ApiServer) PrintRouteTable(print bool) {
+	this.printRegisterInfo = print
+}
 
 /**
  * 启动一个API Server的端口监听
@@ -149,7 +157,9 @@ func (this *ApiServer) registerFuncHandlerRoute() {
 			logger.Debug("handle api request : %s, %s", r.RequestURI, runtime.FuncForPC(reflect.ValueOf(handlerDef.HandleFunc).Pointer()).Name())
 			handlerDef.HandleFunc(reqWrapper, respWrapper)
 		}
-		logger.Debug("register api func handler: %d <%s> %s %s", i, handlerDef.Method, handlerDef.Path, runtime.FuncForPC(reflect.ValueOf(handlerDef.HandleFunc).Pointer()).Name())
+		if this.printRegisterInfo {
+			logger.Debug("register api func handler: %d <%s> %s %s", i, handlerDef.Method, handlerDef.Path, runtime.FuncForPC(reflect.ValueOf(handlerDef.HandleFunc).Pointer()).Name())
+		}
 		this.httpRouter.Methods(handlerDef.Method).Path(handlerDef.Path).HandlerFunc(handleFunc)
 	}
 }
@@ -196,7 +206,9 @@ func (this *ApiServer) registerStructHandlerRoute() {
 			headerInterceptor := this.assembleInterceptors(newStructHandler, ctx, reqWrapper, respWrapper)
 			this.callStructHandler(headerInterceptor, ctx, reqWrapper, respWrapper)
 		}
-		logger.Debug("register api struct handler: %d <%s> %s %s", i, handlerDef.Method, handlerDef.Path, structHandlerType.String())
+		if this.printRegisterInfo {
+			logger.Debug("register api struct handler: %d <%s> %s %s", i, handlerDef.Method, handlerDef.Path, structHandlerType.String())
+		}
 		this.httpRouter.Methods(handlerDef.Method).Path(handlerDef.Path).HandlerFunc(handleFunc)
 	}
 }
