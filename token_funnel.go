@@ -127,6 +127,8 @@ func (this *TokenFunnel) GetToken(tokenName string, ctx *RequestContext) {
  * 对于未注册的token，进行限次日志警告
  */
 func (this *TokenFunnel) logUndefinedTokenName(tokenName string, ctx *RequestContext) {
+	this.lock.Lock()
+	defer this.lock.Unlock()
 	undefinedTokenCount, ok := this.undefinedTokenLogCount[tokenName]
 	if !ok {
 		undefinedTokenCount = 0
