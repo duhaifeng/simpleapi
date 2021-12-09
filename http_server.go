@@ -292,15 +292,54 @@ func (this *ApiServer) assembleServiceToHandler(handlerVal reflect.Value, ctx *R
 		if !ok {
 			continue
 		}
-		serviceVal = this.assembleDbToService(serviceObj, serviceVal, ctx)
-		//组装Service中的DB操作对象
+
 		serviceObj.setContext(ctx)
 		serviceObj.SetOrmConn(this.ormConn)
+		//组装Service中的DB操作对象
+		serviceVal = this.assembleDbToService(serviceObj, serviceVal, ctx)
+		//组织Service间的横向引用
+		serviceVal = this.assembleServiceToService(serviceObj, serviceVal, ctx)
 		serviceObj.Init()
 		//logger.Debug("%s assemble service <%p-%s> to handler <%s>'s field", ctx.GetRequestId(), &serviceObj, handlerFieldType.Name(), handlerElem.Type().Name())
 		handlerFieldVal.Set(serviceVal)
 	}
 	return handlerVal
+}
+
+/**
+ * 20211209：由于Service之间可能会横向调用，因此特增加本方法
+ */
+func (this *ApiServer) assembleServiceToService(serviceObj IApiService, serviceVal reflect.Value, ctx *RequestContext) reflect.Value {
+	serviceElem := serviceVal.Elem()
+	for i := 0; i < serviceElem.NumField(); i++ {
+		serviceFieldVal := serviceElem.Field(i)
+		if !serviceFieldVal.IsValid() || !serviceFieldVal.CanInterface() {
+			continue
+		}
+		serviceFieldType := serviceFieldVal.Type()
+		//为了确保Service与DB相互引用时，指向的是同一个Service， 必须要求成员Field为指针类型
+		if serviceFieldType.Kind() != reflect.Ptr {
+			continue
+		}
+		//Go中父类也会被子类当成Field遍历出来，需要跳过对父类属性的重生成
+		if strings.Contains(serviceFieldType.String(), "BaseService") {
+			continue
+		}
+		refServiceVal := reflect.New(serviceFieldType.Elem())
+		refServiceObj, ok := refServiceVal.Interface().(IApiService)
+		if !ok {
+			continue
+		}
+		refServiceObj.setContext(ctx)
+		refServiceObj.SetOrmConn(serviceObj.GetOrmConn())
+		//组装二次引用Service中的DB操作对象
+		refServiceVal = this.assembleDbToService(refServiceObj, refServiceVal, ctx)
+		//如果Service中又递归引用了其它Service，则一直继续初始化下去
+		this.assembleServiceToService(refServiceObj, refServiceVal, ctx)
+		refServiceObj.Init()
+	}
+
+	return serviceVal
 }
 
 /**
