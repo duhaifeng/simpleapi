@@ -3,9 +3,6 @@ package simpleapi
 import (
 	"encoding/json"
 	"fmt"
-	log "github.com/duhaifeng/loglet"
-	"github.com/duhaifeng/simpleapi/db"
-	"github.com/gorilla/mux"
 	"net/http"
 	"os"
 	"reflect"
@@ -13,6 +10,10 @@ import (
 	"runtime/debug"
 	"strings"
 	"time"
+
+	log "github.com/duhaifeng/loglet"
+	"github.com/duhaifeng/simpleapi/db"
+	"github.com/gorilla/mux"
 )
 
 var logger = log.NewLogger()
@@ -330,13 +331,15 @@ func (this *ApiServer) assembleServiceToService(serviceObj IApiService, serviceV
 		if !ok {
 			continue
 		}
+
 		refServiceObj.setContext(ctx)
 		refServiceObj.SetOrmConn(serviceObj.GetOrmConn())
 		//组装二次引用Service中的DB操作对象
 		refServiceVal = this.assembleDbToService(refServiceObj, refServiceVal, ctx)
 		//如果Service中又递归引用了其它Service，则一直继续初始化下去
-		this.assembleServiceToService(refServiceObj, refServiceVal, ctx)
+		refServiceVal = this.assembleServiceToService(refServiceObj, refServiceVal, ctx)
 		refServiceObj.Init()
+		serviceFieldVal.Set(refServiceVal)
 	}
 
 	return serviceVal
