@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
-	"sync"
 	"time"
 
 	"github.com/duhaifeng/simpleapi"
@@ -17,12 +15,12 @@ import (
 
 func main() {
 	s := new(simpleapi.ApiServer)
-	s.HandRequest("GET", "/get/{getid:[0-9]+}", GetHandler)
-	s.HandRequest("POST", "/pos{*}", ParamHandler)
-	s.HandRequest("GET", "/user/{userid}", UrlVarHandler)
-	s.HandRequest("GET", "/upload_file", OpenFilePageHandler) //用于打开上传文件的页面
-	s.HandRequest("POST", "/upload_file", UpFileHandler)
-	s.RegisterHandler("GET", "/struct_handler", MyStructHandler{})
+	s.HandRequest("GET", "/get/{getid:[0-9]+}", OneGetFuncHandler)
+	s.HandRequest("POST", "/pos{*}", ParamFuncHandler)
+	s.HandRequest("GET", "/user/{userid}", UrlVarFuncHandler)
+	s.HandRequest("GET", "/upload_file", OpenFilePageFuncHandler) //用于打开上传文件的页面
+	s.HandRequest("POST", "/upload_file", UpFileFuncHandler)
+
 	//注册拦截器
 	s.RegisterInterceptor(new(MyExceptionInterceptor))
 
@@ -44,7 +42,7 @@ func main() {
 	time.Sleep(time.Second)
 }
 
-func GetHandler(r *simpleapi.Request, w *simpleapi.Response) {
+func OneGetFuncHandler(r *simpleapi.Request, w *simpleapi.Response) {
 	fmt.Println(r.GetUrl())
 	fmt.Println("url-var:", r.GetUrlVar("getid"))
 	body, _ := r.GetBody()
@@ -52,7 +50,7 @@ func GetHandler(r *simpleapi.Request, w *simpleapi.Response) {
 	w.JsonResponse(r.GetUrlVar("getid"))
 }
 
-func ParamHandler(r *simpleapi.Request, w *simpleapi.Response) {
+func ParamFuncHandler(r *simpleapi.Request, w *simpleapi.Response) {
 	body, err := r.GetBody()
 	if err != nil {
 		fmt.Println(err)
@@ -70,30 +68,30 @@ func ParamHandler(r *simpleapi.Request, w *simpleapi.Response) {
 	w.JsonResponse(data)
 }
 
-func UrlVarHandler(r *simpleapi.Request, w *simpleapi.Response) {
+func UrlVarFuncHandler(r *simpleapi.Request, w *simpleapi.Response) {
 	w.SetHeader("Content-Type", "Application/json")
 	fmt.Println(">>>", mux.Vars(r.GetOriReq())["userid"])
 	w.JsonResponse(r.GetUrlVar("userid"))
 }
 
-const uploadHTML = `
-<html>  
-  <head>  
-    <title>选择文件</title>
-  </head>  
-  <body>  
-    <form enctype="multipart/form-data" action="/upload_file" method="post">  
-      <input type="file" name="uploadfile" />  
-      <input type="submit" value="上传文件" />  
-    </form>  
-  </body>  
-</html>`
+func OpenFilePageFuncHandler(r *simpleapi.Request, w *simpleapi.Response) {
+	uploadHTML := `
+		<html>  
+		<head>  
+			<title>选择文件</title>
+		</head>  
+		<body>  
+			<form enctype="multipart/form-data" action="/upload_file" method="post">  
+			<input type="file" name="uploadfile" />  
+			<input type="submit" value="上传文件" />  
+			</form>  
+		</body>  
+		</html>`
 
-func OpenFilePageHandler(r *simpleapi.Request, w *simpleapi.Response) {
 	w.Write([]byte(uploadHTML))
 }
 
-func UpFileHandler(r *simpleapi.Request, w *simpleapi.Response) {
+func UpFileFuncHandler(r *simpleapi.Request, w *simpleapi.Response) {
 	upFile, handler, err := r.GetFormFile("uploadfile")
 	if err != nil {
 		w.JsonResponse(err.Error())
@@ -117,6 +115,7 @@ func UpFileHandler(r *simpleapi.Request, w *simpleapi.Response) {
 	defer localFile.Close()
 
 	fhash := md5.New()
+	//利用io.TeeReader在读取文件内容时计算hash值
 	fileSize, err := io.Copy(localFile, io.TeeReader(upFile, fhash))
 	if err != nil {
 		w.JsonResponse(fmt.Sprintln("write file to disk failed:", err.Error()))
@@ -142,84 +141,4 @@ func (this *MyExceptionInterceptor) HandleRequest(r *simpleapi.Request) (interfa
 	}
 	fmt.Println("22222222222222222MyExceptionInterceptor", this.GetContext().GetRequestId())
 	return data, err
-}
-
-var cnt = 0
-var lock = sync.Mutex{}
-
-type MyStructHandler struct {
-	simpleapi.BaseHandler
-	flag      int
-	MyService *HandlerService
-}
-
-func (this *MyStructHandler) Init() {
-	this.BaseHandler.Init()
-	lock.Lock()
-	defer lock.Unlock()
-	cnt++
-	this.flag = cnt
-}
-
-func (this *MyStructHandler) HandleRequest(r *simpleapi.Request) (interface{}, error) {
-	time.Sleep(time.Microsecond * 1000)
-	fmt.Printf(">>>>> %s %d %d\n", this.GetContext().GetRequestId(), this.flag, reflect.ValueOf(this).Pointer())
-	body, _ := r.GetBody()
-	fmt.Println("body", string(body))
-	body2, _ := r.GetBody()
-	fmt.Println("body2", string(body2))
-	return this.flag, nil
-}
-
-type HandlerService struct {
-	DB *ServiceDb
-	simpleapi.BaseService
-}
-
-func (this *HandlerService) DoService() {
-	fmt.Printf(">>>>> %s %p do service\n", this.GetContext().GetRequestId(), this)
-	err := this.BeginTransaction()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	this.DB.operateDb()
-	this.RollbackTransaction()
-	this.CommitTransaction()
-}
-
-type ServiceDb struct {
-	simpleapi.BaseDbOperator
-}
-
-type RackInfo struct {
-	Id             int `gorm:"primary_key:yes"`
-	RackName       string
-	PodName        string
-	RackNetwork    string
-	RackSubnetMask string
-	RackTorIp      string
-}
-
-func (*RackInfo) TableName() string {
-	return "cm_rack_info"
-}
-
-func (this *ServiceDb) operateDb() {
-	fmt.Printf(">>>>> %s operate db \n", this.GetContext().GetRequestId())
-	newRack := new(RackInfo)
-	newRack.RackName = fmt.Sprintf("dutest_%s", time.Now().Format("15:04:05"))
-	newRack.PodName = "test"
-	newRack.RackNetwork = "10.226.2.0/27"
-	newRack.RackSubnetMask = "255.255.255.224"
-	this.OrmConn().Create(newRack)
-	rackInfoList := make([]*RackInfo, 0)
-	err := this.OrmConn().Find(&rackInfoList).Error
-	if err != nil {
-		fmt.Printf(">>>>> %s fetch rack list error: %s\n", this.GetContext().GetRequestId(), err.Error())
-		return
-	}
-	for _, rack := range rackInfoList {
-		fmt.Printf(">>>>> %s rack info: %d %s\n", this.GetContext().GetRequestId(), rack.Id, rack.RackName)
-	}
 }
