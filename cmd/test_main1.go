@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -91,30 +94,39 @@ func OpenFilePageHandler(r *simpleapi.Request, w *simpleapi.Response) {
 }
 
 func UpFileHandler(r *simpleapi.Request, w *simpleapi.Response) {
-	upFile, h, err := r.GetFormFile("uploadfile")
+	upFile, handler, err := r.GetFormFile("uploadfile")
 	if err != nil {
 		w.JsonResponse(err.Error())
 		return
 	}
 	defer upFile.Close()
-	if h.Size != 0 {
-		localFile, err := os.OpenFile("/mnt/d/"+h.Filename, os.O_WRONLY|os.O_CREATE, 0666)
-		if err != nil {
-			w.JsonResponse(err.Error())
-			return
-		}
-		defer localFile.Close()
-		_, err = io.Copy(localFile, upFile)
-		if err != nil {
-			w.JsonResponse(err.Error())
-			return
-		}
+
+	fmt.Println("-----------")
+	fmt.Println("receive file:", handler.Filename, handler.Size)
+	if handler.Size == 0 {
+		w.JsonResponse(errors.New("file size is zero."))
+		return
 	}
-	fmt.Println(">>>", r.GetFormParam("userid"))
-	fmt.Println(">>>", h.Filename)
-	fmt.Println(">>>", h.Size)
+
+	localFile, err := os.OpenFile("/mnt/d/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		fmt.Println("upload file failed: ", err.Error())
+		w.JsonResponse(fmt.Sprintln("upload file failed:", err.Error()))
+		return
+	}
+	defer localFile.Close()
+
+	fhash := md5.New()
+	fileSize, err := io.Copy(localFile, io.TeeReader(upFile, fhash))
+	if err != nil {
+		w.JsonResponse(fmt.Sprintln("write file to disk failed:", err.Error()))
+		return
+	}
+	hstr := hex.EncodeToString(fhash.Sum(nil))
+	fmt.Println("upload success: ", handler.Filename, fileSize, hstr)
+
 	w.SetHeader("Content-Type", "Application/json")
-	w.JsonResponse(h.Filename)
+	w.JsonResponse(fmt.Sprint("upload success: ", handler.Filename, fileSize, hstr))
 }
 
 type MyExceptionInterceptor struct {
