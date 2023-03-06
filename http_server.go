@@ -194,8 +194,8 @@ func (this *ApiServer) registerStructHandlerRoute() {
 			this.GetTokenFunnel().GetToken(r.URL.Path, ctx)
 			//每次请求需要生成一个新的Handler对象，避免上下文对象被多个请求共享
 			newStructHandlerVal := reflect.New(structHandlerType)
-			if r.Method != http.MethodGet {
-				//将Body的JSON数据组装到Handler数据字段中
+			if r.Method != http.MethodGet && !strings.Contains(r.Header.Get("Content-Type"), "multipart") {
+				//将Body的JSON数据组装到Handler数据字段中，但是文件上传时multipart格式的Form则不做此处理，否则Body被读取后就无法再读取里面的文件内容
 				this.assembleRequestDataToHandler(newStructHandlerVal, reqWrapper)
 			}
 			//组装Handler内声明的所有Service Field
